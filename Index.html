@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Woody's Pizza">
+<title>🍕 Woody's Pizza Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
+  :root {
+    --bg:#0f0e0d;--surface:#1a1916;--surface2:#222120;
+    --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.18);
+    --text:#f0ede8;--muted:#8a8680;--hint:#4a4845;
+    --green:#4ade80;--green-dim:rgba(74,222,128,0.12);
+    --red:#f87171;--blue:#60a5fa;--blue-dim:rgba(96,165,250,0.12);
+    --amber:#fbbf24;--amber-dim:rgba(251,191,36,0.1);
+    --orange:#fb923c;--orange-dim:rgba(251,146,60,0.1);
+    --purple:#c084fc;--purple-dim:rgba(192,132,252,0.12);
+    --radius:14px;--radius-sm:9px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:calc(env(safe-area-inset-bottom) + 40px);}
+
+  .header{position:sticky;top:0;z-index:100;background:rgba(15,14,13,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:10px 14px;}
+  .header-inner{max-width:520px;margin:0 auto;}
+  .header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .logo{display:flex;align-items:center;gap:8px;}
+  .logo-icon{font-size:20px;}
+  .logo-name{font-size:15px;font-weight:600;letter-spacing:-0.3px;}
+  .logo-sub{font-size:11px;color:var(--muted);}
+  .week-nav{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 8px;}
+  .week-nav button{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;}
+  .week-nav button:active{background:var(--surface2);}
+  .week-date{font-size:11px;font-weight:500;min-width:86px;text-align:center;}
+
+  .day-tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+  .day-tabs::-webkit-scrollbar{display:none;}
+  .day-tab{flex-shrink:0;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);position:relative;}
+  .day-tab.active{background:var(--green-dim);border-color:rgba(74,222,128,0.3);color:var(--green);}
+  .day-tab.has-data::after{content:'';position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--amber);}
+  .day-tab.active.has-data::after{background:var(--green);}
+  .tab-total{flex-shrink:0;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(192,132,252,0.3);background:var(--purple-dim);color:var(--purple);}
+  .tab-total.active{border-color:rgba(192,132,252,0.5);background:rgba(192,132,252,0.2);}
+
+  .main{max-width:520px;margin:0 auto;padding:12px 14px 20px;}
+
+  .summary-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px;}
+  .metric-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 10px 7px;}
+  .metric-tile .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;}
+  .metric-tile .val{font-size:14px;font-weight:600;}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;}
+  .card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;border-bottom:1px solid var(--border);}
+  .card-hl{display:flex;align-items:center;gap:8px;}
+  .sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.7px;}
+  .card-sub{font-size:12px;color:var(--muted);}
+
+  .field{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;border-bottom:1px solid var(--border);gap:8px;}
+  .field:last-child{border-bottom:none;}
+  .fi{flex:1;min-width:0;}
+  .fn{font-size:13px;color:var(--text);}
+  .fh{font-size:10px;color:var(--hint);margin-top:1px;}
+  .field input{width:95px;text-align:right;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:5px 8px;-webkit-appearance:none;}
+  .field input:focus{outline:none;border-color:var(--border2);}
+  .field input::placeholder{color:var(--hint);}
+  .field.comp .fv{font-size:13px;font-weight:500;color:var(--muted);min-width:95px;text-align:right;}
+  /* Total view computed fields look same as comp but slightly brighter */
+  .field.tot .fv{font-size:13px;font-weight:500;color:var(--text);min-width:95px;text-align:right;}
+  .sdiv{height:1px;background:var(--border);margin:2px 0;}
+
+  .gst-row{display:flex;justify-content:space-between;align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);font-size:13px;}
+  .gst-row:last-child{border-bottom:none;}
+  .gst-row .gl{color:var(--muted);}
+  .gst-row .gv{font-weight:500;}
+
+  .result-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .rl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+  .rs{font-size:11px;color:var(--hint);margin-top:3px;}
+  .ra{font-size:26px;font-weight:600;letter-spacing:-0.5px;}
+
+  .btn-row{display:flex;gap:8px;margin-bottom:8px;}
+  .btn{flex:1;padding:11px 8px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--surface);color:var(--text);}
+  .btn:active{background:var(--surface2);}
+  .btn.accent{background:var(--green-dim);border-color:rgba(74,222,128,0.25);color:var(--green);}
+  .btn.accent-purple{background:var(--purple-dim);border-color:rgba(192,132,252,0.25);color:var(--purple);}
+
+  /* Total view banner */
+  .total-banner{background:var(--purple-dim);border:1px solid rgba(192,132,252,0.2);border-radius:var(--radius-sm);padding:8px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--purple);}
+
+  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surface2);border:1px solid var(--border2);border-radius:999px;padding:10px 20px;font-size:13px;font-weight:500;color:var(--text);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);z-index:999;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+
+  .dot-rev{background:var(--green);}.dot-var{background:var(--blue);}.dot-fix{background:var(--amber);}.dot-gst{background:var(--orange);}
+  .t-rev{color:var(--green);}.t-var{color:var(--blue);}.t-fix{color:var(--amber);}.t-gst{color:var(--orange);}
+
+  .view{display:none;}.view.active{display:block;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-top">
+      <div class="logo">
+        <span class="logo-icon">🍕</span>
+        <div><div class="logo-name">Woody's Pizza</div><div class="logo-sub" id="view-sub">Daily Profit Tracker</div></div>
+      </div>
+      <div class="week-nav">
+        <button id="prev">&#8249;</button>
+        <div class="week-date" id="wk-label">—</div>
+        <button id="next">&#8250;</button>
+      </div>
+    </div>
+    <div class="day-tabs" id="day-tabs">
+      <button class="day-tab" data-day="0">Tue</button>
+      <button class="day-tab" data-day="1">Wed</button>
+      <button class="day-tab" data-day="2">Thu</button>
+      <button class="day-tab" data-day="3">Fri</button>
+      <button class="day-tab" data-day="4">Sat</button>
+      <button class="day-tab" data-day="5">Sun</button>
+      <button class="tab-total" id="tab-total">∑ Week Total</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ══════════ DAY VIEW ══════════ -->
+  <div class="view" id="view-day">
+    <div class="summary-strip">
+      <div class="metric-tile"><div class="lbl">Revenue</div><div class="val" id="d-m-rev" style="color:var(--green)">$0</div></div>
+      <div class="metric-tile"><div class="lbl">Costs</div><div class="val" id="d-m-cost" style="color:var(--red)">$0</div></div>
+      <div class="metric-tile"><div class="lbl">Profit</div><div class="val" id="d-m-profit">$0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-hl"><div class="sdot dot-rev"></div><span class="card-title t-rev">Revenue</span></div><span class="card-sub" id="d-rev-total">$0.00</span></div>
+      <div class="field"><div class="fi"><div class="fn">POS Sales</div></div><input id="d-pos" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Online Sales</div></div><input id="d-online" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Uber / App Sales</div></div><input id="d-uber-sales" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Other Revenue</div><div class="fh">Catering, drinks, extras</div></div><input id="d-other-rev" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-hl"><div class="sdot dot-var"></div><span class="card-title t-var">Variable Costs</span></div><span class="card-sub" id="d-var-total">$0.00</span></div>
+      <div class="field"><div class="fi"><div class="fn">Greenfield Foods</div><div class="fh">GST Free</div></div><input id="d-greenfield" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Fremantle Foods (GST)</div></div><input id="d-frem-gst" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Fremantle Foods (Non-GST)</div></div><input id="d-frem-nogst" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">West Oz Foods (GST)</div></div><input id="d-westoz-gst" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">West Oz Foods (Non-GST)</div></div><input id="d-westoz-nogst" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Meat Connoisseur</div><div class="fh">GST Free</div></div><input id="d-meat" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">IGA</div><div class="fh">Includes GST</div></div><input id="d-iga" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Campbells</div><div class="fh">Includes GST</div></div><input id="d-campbells" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="sdiv"></div>
+      <div class="field"><div class="fi"><div class="fn">Payroll (Wages)</div></div><input id="d-wages" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Superannuation</div></div><input id="d-super" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="sdiv"></div>
+      <div class="field"><div class="fi"><div class="fn">Uber / App Fees</div></div><input id="d-uber-fees" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Merchant Fees</div><div class="fh">POS, online, bank</div></div><input id="d-merchant" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><div class="fi"><div class="fn">Other Variable</div><div class="fh">Consumables, cleaning</div></div><input id="d-other-var" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-hl"><div class="sdot dot-fix"></div><span class="card-title t-fix">Fixed Costs (Daily Share)</span></div><span class="card-sub" id="d-fix-total">$0.00</span></div>
+      <div class="field comp"><div class="fi"><div class="fn">Rent</div></div><div class="fv" id="d-f-rent">$0.00</div></div>
+      <div class="field comp"><div class="fi"><div class="fn">Gas</div></div><div class="fv" id="d-f-gas">$0.00</div></div>
+      <div class="field comp"><div class="fi"><div class="fn">Electricity</div></div><div class="fv" id="d-f-elec">$0.00</div></div>
+      <div class="field comp"><div class="fi"><div class="fn">Insurance</div></div><div class="fv" id="d-f-ins">$0.00</div></div>
+      <div class="field comp"><div class="fi"><div class="fn">Phone / Internet</div></div><div class="fv" id="d-f-phone">$0.00</div></div>
+      <div class="field"><div class="fi"><div class="fn">Other Fixed (daily)</div></div><input id="d-other-fix" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-hl"><div class="sdot dot-gst"></div><span class="card-title t-gst">GST (Daily)</span></div></div>
+      <div class="gst-row"><span class="gl">GST on Sales</span><span class="gv" id="d-gst-out">$0.00</span></div>
+      <div class="gst-row"><span class="gl">GST Credits (Frem. &amp; W.Oz)</span><span class="gv" id="d-gst-cred">$0.00</span></div>
+      <div class="gst-row" style="background:var(--orange-dim)"><span class="gl" style="color:var(--orange);font-weight:600">Net GST Payable</span><span class="gv" id="d-gst-net" style="color:var(--orange)">$0.00</span></div>
+    </div>
+
+    <div class="result-bar">
+      <div><div class="rl">Daily Profit</div><div class="rs" id="d-profit-meta"></div></div>
+      <div class="ra" id="d-net-profit">$0.00</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn accent" id="copy-day-btn">📋 Copy Day</button>
+      <button class="btn" id="clear-day-btn">🗑 Clear</button>
+    </div>
+  </div><!-- end day view -->
+
+
+  <!-- ══════════ WEEK TOTAL VIEW ══════════ -->
+  <div class="view" id="view-total">
+
+    <div class="total-banner">
+      <span>∑</span>
+      <span>Weekly totals across all 6 trading days — read only</span>
+    </div>
+
+    <div class="summary-strip">
+      <div class="metric-tile"><div class="lbl">Revenue</div><div class="val" id="w-m-rev" style="color:var(--green)">$0</div></div>
+      <div class="metric-tile"><div class="lbl">Costs</div><div class="val" id="w-m-cost" style="color:var(--red)">$0</div></div>
+      <div class="metric-tile"><div class="lbl">Profit</div><div class="val" id="w-m-profit">$0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-hl"><div class="sdot dot-rev"></div><span class="card-title t-rev">Revenue</span></div><span class="card-sub" id="w-rev-total">$0.00</span></div>
+      <div class="field tot"><div class="fi"><div class="fn">POS Sales</div></div><div class="fv" id="w-pos">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Online Sales</div></div><div class="fv" id="w-online">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Uber / App Sales</div></div><div class="fv" id="w-uber-sales">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Other Revenue</div><div class="fh">Catering, drinks, extras</div></div><div class="fv" id="w-other-rev">$0.00</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-hl"><div class="sdot dot-var"></div><span class="card-title t-var">Variable Costs</span></div><span class="card-sub" id="w-var-total">$0.00</span></div>
+      <div class="field tot"><div class="fi"><div class="fn">Greenfield Foods</div><div class="fh">GST Free</div></div><div class="fv" id="w-greenfield">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Fremantle Foods (GST)</div></div><div class="fv" id="w-frem-gst">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Fremantle Foods (Non-GST)</div></div><div class="fv" id="w-frem-nogst">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">West Oz Foods (GST)</div></div><div class="fv" id="w-westoz-gst">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">West Oz Foods (Non-GST)</div></div><div class="fv" id="w-westoz-nogst">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Meat Connoisseur</div><div class="fh">GST Free</div></div><div class="fv" id="w-meat">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">IGA</div><div class="fh">Includes GST</div></div><div class="fv" id="w-iga">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Campbells</div><div class="fh">Includes GST</div></div><div class="fv" id="w-campbells">$0.00</div></div>
+      <div class="sdiv"></div>
+      <div class="field tot"><div class="fi"><div class="fn">Payroll (Wages)</div></div><div class="fv" id="w-wages">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Superannuation</div></div><div class="fv" id="w-super">$0.00</div></div>
+      <div class="sdiv"></div>
+      <div class="field tot"><div class="fi"><div class="fn">Uber / App Fees</div></div><div class="fv" id="w-uber-fees">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Merchant Fees</div><div class="fh">POS, online, bank</div></div><div class="fv" id="w-merchant">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Other Variable</div><div class="fh">Consumables, cleaning</div></div><div class="fv" id="w-other-var">$0.00</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-hl"><div class="sdot dot-fix"></div><span class="card-title t-fix">Fixed Costs (Weekly Total)</span></div><span class="card-sub" id="w-fix-total">$0.00</span></div>
+      <div class="field tot"><div class="fi"><div class="fn">Rent</div></div><div class="fv" id="w-f-rent">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Gas</div></div><div class="fv" id="w-f-gas">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Electricity</div></div><div class="fv" id="w-f-elec">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Insurance</div></div><div class="fv" id="w-f-ins">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Phone / Internet</div></div><div class="fv" id="w-f-phone">$0.00</div></div>
+      <div class="field tot"><div class="fi"><div class="fn">Other Fixed</div></div><div class="fv" id="w-other-fix">$0.00</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-hl"><div class="sdot dot-gst"></div><span class="card-title t-gst">GST Summary (Weekly)</span></div></div>
+      <div class="gst-row"><span class="gl">GST on Sales</span><span class="gv" id="w-gst-out">$0.00</span></div>
+      <div class="gst-row"><span class="gl">GST Credits (Frem. &amp; W.Oz)</span><span class="gv" id="w-gst-cred">$0.00</span></div>
+      <div class="gst-row" style="background:var(--orange-dim)"><span class="gl" style="color:var(--orange);font-weight:600">Net GST Payable</span><span class="gv" id="w-gst-net" style="color:var(--orange)">$0.00</span></div>
+    </div>
+
+    <div class="result-bar">
+      <div><div class="rl">Net Weekly Profit</div><div class="rs" id="w-profit-meta"></div></div>
+      <div class="ra" id="w-net-profit">$0.00</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn accent-purple" id="copy-week-btn">📋 Copy Week Summary</button>
+    </div>
+
+  </div><!-- end week total view -->
+
+</div><!-- end main -->
+<div class="toast" id="toast"></div>
+
+<script>
+const DAYS = ['Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const DAYS_SHORT = ['Tue','Wed','Thu','Fri','Sat','Sun'];
+const FIXED_W = {rent:4880*12/52, gas:400*12/52, elec:600*12/52, ins:654*10/52, phone:400*12/52};
+const FIXED_D = {};
+Object.keys(FIXED_W).forEach(k => FIXED_D[k] = FIXED_W[k] / 6);
+
+const DAY_FIELDS = ['pos','online','uber-sales','other-rev','greenfield','frem-gst','frem-nogst','westoz-gst','westoz-nogst','meat','iga','campbells','wages','super','uber-fees','merchant','other-var','other-fix'];
+
+let currentWeek = getWeekKey(new Date());
+let currentDay = getTodayDayIndex();
+let viewMode = 'day'; // 'day' | 'total'
+
+function getTodayDayIndex() {
+  const dow = new Date().getDay();
+  const map = {2:0,3:1,4:2,5:3,6:4,0:5};
+  return map[dow] !== undefined ? map[dow] : 0;
+}
+
+function getWeekKey(date) {
+  const d = new Date(date);
+  const dow = d.getDay();
+  const daysSinceTue = (dow===0)?5:(dow===1)?6:dow-2;
+  const tue = new Date(d);
+  tue.setDate(d.getDate() - daysSinceTue);
+  return tue.toISOString().slice(0,10);
+}
+
+function weekLabel(key) {
+  const s = new Date(key+'T00:00:00');
+  const e = new Date(s); e.setDate(e.getDate()+5);
+  const f = d => d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+  return f(s)+' \u2013 '+f(e);
+}
+
+function offsetWeek(key, delta) {
+  const d = new Date(key+'T00:00:00');
+  d.setDate(d.getDate()+delta*7);
+  return getWeekKey(d);
+}
+
+function sKey(week, day) { return 'woodys_'+week+'_d'+day; }
+function load(week, day) { try{const r=localStorage.getItem(sKey(week,day));return r?JSON.parse(r):{}}catch(e){return{};} }
+function save(week, day, data) { try{localStorage.setItem(sKey(week,day),JSON.stringify(data));}catch(e){} }
+function hasData(week, day) { const d=load(week,day); return DAY_FIELDS.some(f=>d[f]&&parseFloat(d[f])>0); }
+
+function vEl(id) { return parseFloat(document.getElementById(id)?.value)||0; }
+function g(data,id) { return parseFloat(data[id])||0; }
+function fmt(n) { return '$'+(+n).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtS(n) { const a=Math.abs(n),s=n<0?'-':''; return a>=1000?s+'$'+(a/1000).toFixed(1)+'k':s+'$'+a.toFixed(0); }
+function setText(id,val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+
+function calcFromData(data) {
+  const pos=g(data,'pos'),online=g(data,'online'),uberS=g(data,'uber-sales'),otherR=g(data,'other-rev');
+  const totalRev=pos+online+uberS+otherR;
+  const fremG=g(data,'frem-gst'),wozG=g(data,'westoz-gst');
+  const wages=g(data,'wages'),sup=g(data,'super');
+  const totalVar=g(data,'greenfield')+fremG+g(data,'frem-nogst')+wozG+g(data,'westoz-nogst')+g(data,'meat')+g(data,'iga')+g(data,'campbells')+wages+sup+g(data,'uber-fees')+g(data,'merchant')+g(data,'other-var');
+  const otherFix=g(data,'other-fix');
+  const totalFix=FIXED_D.rent+FIXED_D.gas+FIXED_D.elec+FIXED_D.ins+FIXED_D.phone+otherFix;
+  const gstOut=totalRev/11,gstCred=(fremG+wozG)/11,gstNet=gstOut-gstCred;
+  const net=totalRev-totalVar-totalFix-gstNet;
+  return {totalRev,totalVar,totalFix,gstOut,gstCred,gstNet,net,wages,sup,pos,online,uberS,otherR,fremG,wozG,otherFix,
+    greenfield:g(data,'greenfield'),fremN:g(data,'frem-nogst'),wozN:g(data,'westoz-nogst'),
+    meat:g(data,'meat'),iga:g(data,'iga'),campbells:g(data,'campbells'),
+    uberFees:g(data,'uber-fees'),merchant:g(data,'merchant'),otherVar:g(data,'other-var')};
+}
+
+// ── DAY VIEW ──────────────────────────────────────────
+function renderDayInputs() {
+  const data = load(currentWeek, currentDay);
+  DAY_FIELDS.forEach(id => {
+    const el = document.getElementById('d-'+id);
+    if(el) el.value = data[id]||'';
+  });
+  updateDayCalc();
+}
+
+function updateDayCalc() {
+  const data = {};
+  DAY_FIELDS.forEach(id => { const el=document.getElementById('d-'+id); if(el) data[id]=el.value; });
+  const c = calcFromData(data);
+
+  setText('d-rev-total', fmt(c.totalRev));
+  setText('d-var-total', fmt(c.totalVar));
+  setText('d-fix-total', fmt(c.totalFix));
+  setText('d-f-rent', fmt(FIXED_D.rent)); setText('d-f-gas', fmt(FIXED_D.gas));
+  setText('d-f-elec', fmt(FIXED_D.elec)); setText('d-f-ins', fmt(FIXED_D.ins)); setText('d-f-phone', fmt(FIXED_D.phone));
+  setText('d-gst-out', fmt(c.gstOut)); setText('d-gst-cred', fmt(c.gstCred)); setText('d-gst-net', fmt(c.gstNet));
+  setText('d-m-rev', fmtS(c.totalRev)); setText('d-m-cost', fmtS(c.totalVar+c.totalFix));
+  setText('d-m-profit', fmtS(c.net));
+  const np=document.getElementById('d-net-profit'); np.textContent=fmt(c.net); np.style.color=c.net>=0?'var(--green)':'var(--red)';
+  document.getElementById('d-m-profit').style.color=c.net>=0?'var(--green)':'var(--red)';
+  const labPct=c.totalRev>0?((c.wages+c.sup)/c.totalRev*100).toFixed(1):'0.0';
+  const profPct=c.totalRev>0?(c.net/c.totalRev*100).toFixed(1):'0.0';
+  setText('d-profit-meta','Labour '+labPct+'%  ·  Margin '+profPct+'%');
+}
+
+// ── WEEK TOTAL VIEW ───────────────────────────────────
+function renderWeekTotal() {
+  // Sum all 6 days
+  const totals = {pos:0,online:0,'uber-sales':0,'other-rev':0,greenfield:0,'frem-gst':0,'frem-nogst':0,'westoz-gst':0,'westoz-nogst':0,meat:0,iga:0,campbells:0,wages:0,super:0,'uber-fees':0,merchant:0,'other-var':0,'other-fix':0};
+
+  for(let i=0;i<6;i++) {
+    const data = load(currentWeek, i);
+    DAY_FIELDS.forEach(f => { totals[f] = (totals[f]||0) + (parseFloat(data[f])||0); });
+  }
+
+  const c = calcFromData(totals);
+  // Override totalFix with true weekly total (not daily share * 6 which would double-count; fixed costs sum naturally)
+  const weekFix = FIXED_W.rent+FIXED_W.gas+FIXED_W.elec+FIXED_W.ins+FIXED_W.phone+(totals['other-fix']||0);
+  const weekNet = c.totalRev - c.totalVar - weekFix - c.gstNet;
+
+  // Revenue
+  setText('w-pos', fmt(totals['pos'])); setText('w-online', fmt(totals['online']));
+  setText('w-uber-sales', fmt(totals['uber-sales'])); setText('w-other-rev', fmt(totals['other-rev']));
+  setText('w-rev-total', fmt(c.totalRev));
+
+  // Variable costs
+  setText('w-greenfield', fmt(totals['greenfield'])); setText('w-frem-gst', fmt(totals['frem-gst']));
+  setText('w-frem-nogst', fmt(totals['frem-nogst'])); setText('w-westoz-gst', fmt(totals['westoz-gst']));
+  setText('w-westoz-nogst', fmt(totals['westoz-nogst'])); setText('w-meat', fmt(totals['meat']));
+  setText('w-iga', fmt(totals['iga'])); setText('w-campbells', fmt(totals['campbells']));
+  setText('w-wages', fmt(totals['wages'])); setText('w-super', fmt(totals['super']));
+  setText('w-uber-fees', fmt(totals['uber-fees'])); setText('w-merchant', fmt(totals['merchant']));
+  setText('w-other-var', fmt(totals['other-var']));
+  setText('w-var-total', fmt(c.totalVar));
+
+  // Fixed costs (true weekly)
+  setText('w-f-rent', fmt(FIXED_W.rent)); setText('w-f-gas', fmt(FIXED_W.gas));
+  setText('w-f-elec', fmt(FIXED_W.elec)); setText('w-f-ins', fmt(FIXED_W.ins));
+  setText('w-f-phone', fmt(FIXED_W.phone)); setText('w-other-fix', fmt(totals['other-fix']));
+  setText('w-fix-total', fmt(weekFix));
+
+  // GST
+  setText('w-gst-out', fmt(c.gstOut)); setText('w-gst-cred', fmt(c.gstCred)); setText('w-gst-net', fmt(c.gstNet));
+
+  // Summary strip
+  setText('w-m-rev', fmtS(c.totalRev)); setText('w-m-cost', fmtS(c.totalVar+weekFix));
+  setText('w-m-profit', fmtS(weekNet));
+  document.getElementById('w-m-profit').style.color = weekNet>=0?'var(--green)':'var(--red)';
+
+  const np=document.getElementById('w-net-profit'); np.textContent=fmt(weekNet); np.style.color=weekNet>=0?'var(--green)':'var(--red)';
+  const labPct=c.totalRev>0?((totals['wages']+totals['super'])/c.totalRev*100).toFixed(1):'0.0';
+  const profPct=c.totalRev>0?(weekNet/c.totalRev*100).toFixed(1):'0.0';
+  setText('w-profit-meta','Labour '+labPct+'%  ·  Margin '+profPct+'%');
+
+  // Store for copy
+  window._weekTotals = {totals, totalRev:c.totalRev, totalVar:c.totalVar, weekFix, gstOut:c.gstOut, gstCred:c.gstCred, gstNet:c.gstNet, weekNet, labPct, profPct};
+}
+
+// ── TABS & NAV ────────────────────────────────────────
+function updateTabs() {
+  document.querySelectorAll('.day-tab').forEach((tab,i) => {
+    tab.classList.toggle('active', viewMode==='day' && i===currentDay);
+    tab.classList.toggle('has-data', hasData(currentWeek,i));
+  });
+  document.getElementById('tab-total').classList.toggle('active', viewMode==='total');
+  document.getElementById('view-sub').textContent = viewMode==='total' ? 'Week Total' : 'Daily Profit Tracker';
+}
+
+function showView(mode) {
+  viewMode = mode;
+  document.getElementById('view-day').classList.toggle('active', mode==='day');
+  document.getElementById('view-total').classList.toggle('active', mode==='total');
+  updateTabs();
+  if(mode==='day') renderDayInputs();
+  if(mode==='total') renderWeekTotal();
+}
+
+document.querySelectorAll('.day-tab').forEach(tab => {
+  tab.addEventListener('click', () => { currentDay=parseInt(tab.dataset.day); showView('day'); });
+});
+document.getElementById('tab-total').addEventListener('click', () => {
+  showView(viewMode==='total'?'day':'total');
+});
+
+document.getElementById('prev').addEventListener('click', () => {
+  currentWeek=offsetWeek(currentWeek,-1);
+  document.getElementById('wk-label').textContent=weekLabel(currentWeek);
+  showView(viewMode);
+});
+document.getElementById('next').addEventListener('click', () => {
+  currentWeek=offsetWeek(currentWeek,1);
+  document.getElementById('wk-label').textContent=weekLabel(currentWeek);
+  showView(viewMode);
+});
+
+// ── AUTO-SAVE ─────────────────────────────────────────
+DAY_FIELDS.forEach(id => {
+  const el = document.getElementById('d-'+id);
+  if(el) el.addEventListener('input', () => {
+    const data={};
+    DAY_FIELDS.forEach(f => { const e=document.getElementById('d-'+f); if(e&&e.value!=='') data[f]=e.value; });
+    save(currentWeek, currentDay, data);
+    updateDayCalc();
+    updateTabs();
+  });
+});
+
+// ── CLEAR ─────────────────────────────────────────────
+document.getElementById('clear-day-btn').addEventListener('click', () => {
+  if(confirm('Clear all entries for '+DAYS[currentDay]+'?')) {
+    localStorage.removeItem(sKey(currentWeek,currentDay));
+    renderDayInputs(); updateTabs();
+    showToast(DAYS_SHORT[currentDay]+' cleared');
+  }
+});
+
+// ── COPY DAY ──────────────────────────────────────────
+document.getElementById('copy-day-btn').addEventListener('click', () => {
+  const data=load(currentWeek,currentDay), c=calcFromData(data), gd=id=>g(data,id);
+  const labPct=c.totalRev>0?((c.wages+c.sup)/c.totalRev*100).toFixed(1):'0.0';
+  const marg=c.totalRev>0?(c.net/c.totalRev*100).toFixed(1):'0.0';
+  const lines=["WOODY'S PIZZA — "+DAYS[currentDay],"Week: "+weekLabel(currentWeek),"",
+    "REVENUE",
+    "  POS Sales:               "+fmt(gd('pos')),
+    "  Online Sales:            "+fmt(gd('online')),
+    "  Uber/App Sales:          "+fmt(gd('uber-sales')),
+    "  Other Revenue:           "+fmt(gd('other-rev')),
+    "  TOTAL:                   "+fmt(c.totalRev),"",
+    "VARIABLE COSTS",
+    "  Greenfield Foods:        "+fmt(gd('greenfield')),
+    "  Fremantle Foods (GST):   "+fmt(gd('frem-gst')),
+    "  Fremantle Foods (NoGST): "+fmt(gd('frem-nogst')),
+    "  West Oz Foods (GST):     "+fmt(gd('westoz-gst')),
+    "  West Oz Foods (NoGST):   "+fmt(gd('westoz-nogst')),
+    "  Meat Connoisseur:        "+fmt(gd('meat')),
+    "  IGA:                     "+fmt(gd('iga')),
+    "  Campbells:               "+fmt(gd('campbells')),
+    "  Payroll (Wages):         "+fmt(gd('wages')),
+    "  Superannuation:          "+fmt(gd('super')),
+    "  Uber/App Fees:           "+fmt(gd('uber-fees')),
+    "  Merchant Fees:           "+fmt(gd('merchant')),
+    "  Other Variable:          "+fmt(gd('other-var')),
+    "  TOTAL:                   "+fmt(c.totalVar),"",
+    "FIXED (daily share):       "+fmt(c.totalFix),
+    "Net GST (daily):           "+fmt(c.gstNet),"",
+    "DAILY PROFIT:              "+fmt(c.net),
+    "Labour %:                  "+labPct+"%",
+    "Margin:                    "+marg+"%"].join('\n');
+  navigator.clipboard.writeText(lines).then(()=>showToast('✓ Copied')).catch(()=>showToast('Long-press to copy'));
+});
+
+// ── COPY WEEK ─────────────────────────────────────────
+document.getElementById('copy-week-btn').addEventListener('click', () => {
+  const wt = window._weekTotals;
+  if(!wt) return;
+  const t=wt.totals;
+  const lines=["WOODY'S PIZZA — Weekly Total","Week: "+weekLabel(currentWeek),"",
+    "REVENUE",
+    "  POS Sales:               "+fmt(t['pos']),
+    "  Online Sales:            "+fmt(t['online']),
+    "  Uber/App Sales:          "+fmt(t['uber-sales']),
+    "  Other Revenue:           "+fmt(t['other-rev']),
+    "  TOTAL REVENUE:           "+fmt(wt.totalRev),"",
+    "VARIABLE COSTS",
+    "  Greenfield Foods:        "+fmt(t['greenfield']),
+    "  Fremantle Foods (GST):   "+fmt(t['frem-gst']),
+    "  Fremantle Foods (NoGST): "+fmt(t['frem-nogst']),
+    "  West Oz Foods (GST):     "+fmt(t['westoz-gst']),
+    "  West Oz Foods (NoGST):   "+fmt(t['westoz-nogst']),
+    "  Meat Connoisseur:        "+fmt(t['meat']),
+    "  IGA:                     "+fmt(t['iga']),
+    "  Campbells:               "+fmt(t['campbells']),
+    "  Payroll (Wages):         "+fmt(t['wages']),
+    "  Superannuation:          "+fmt(t['super']),
+    "  Uber/App Fees:           "+fmt(t['uber-fees']),
+    "  Merchant Fees:           "+fmt(t['merchant']),
+    "  Other Variable:          "+fmt(t['other-var']),
+    "  TOTAL VARIABLE:          "+fmt(wt.totalVar),"",
+    "FIXED COSTS (Weekly)",
+    "  Rent:                    "+fmt(FIXED_W.rent),
+    "  Gas:                     "+fmt(FIXED_W.gas),
+    "  Electricity:             "+fmt(FIXED_W.elec),
+    "  Insurance:               "+fmt(FIXED_W.ins),
+    "  Phone/Internet:          "+fmt(FIXED_W.phone),
+    "  Other Fixed:             "+fmt(t['other-fix']),
+    "  TOTAL FIXED:             "+fmt(wt.weekFix),"",
+    "GST",
+    "  GST on Sales:            "+fmt(wt.gstOut),
+    "  GST Credits:             "+fmt(wt.gstCred),
+    "  Net GST Payable:         "+fmt(wt.gstNet),"",
+    "NET WEEKLY PROFIT:         "+fmt(wt.weekNet),
+    "Labour % of Sales:         "+wt.labPct+"%",
+    "Net Profit Margin:         "+wt.profPct+"%"].join('\n');
+  navigator.clipboard.writeText(lines).then(()=>showToast('✓ Week summary copied')).catch(()=>showToast('Long-press to copy'));
+});
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── INIT ──────────────────────────────────────────────
+document.getElementById('wk-label').textContent = weekLabel(currentWeek);
+showView('day');
+</script>
+</body>
+</html>
